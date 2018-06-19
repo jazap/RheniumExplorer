@@ -1,0 +1,182 @@
+- Node / Iquidus Explorer Setup for Dummies
+- vultr vps running Ubuntu 16.04
+
+	This Tutorial is going to create a Daemon (node) and install Explorer.
+
+	Follow the instructions in [coin name] docs folder Unix build - some builds are different.
+
+- Change passwords
+--------------------
+# passwd
+
+-Update Packages
+------------------
+# apt-get update
+# apt-get upgrade -y
+
+- Install deps
+  (note and correct any errors 
+   before proceeding to next step)
+---------------------------------------------
+# apt-get install build-essential libtool autotools-dev autoconf pkg-config libssl-dev
+# apt-get install libboost-all-dev
+# apt-get install libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools 
+# apt install python-pip
+# pip install --upgrade pip
+# apt-get install libqrencode-dev autoconf openssl libssl-dev libevent-dev
+# apt-get install libminiupnpc-dev
+# apt-get install libdb++-dev
+# apt-get install libevent-dev
+# apt-get install libzmq3-dev
+# apt-get install nano git -y
+# apt install unzip
+# apt autoremove
+# wget http://download.oracle.com/berkeley-db/db-4.8.30.zip
+# unzip db-4.8.30.zip
+# cd db-4.8.30/build_unix/
+# ../dist/configure --prefix=/usr/local --enable-cxx
+# make
+# sudo make install
+# cd ~
+# chmod -R 777 db-4.8.30/*
+# export BDB_INCLUDE_PATH="/db-4.8.30/include"
+# export BDB_LIB_PATH="/db-4.8.30/lib"
+# ln -s /usr/lib/libdb-4.8.so
+# wget https://github.com/google/protobuf/releases/download/v3.5.1/protobuf-all-3.5.1.tar.gz
+# tar -zxvf protobuf-all-3.5.1.tar.gz
+# cd protobuf-3.5.1/
+# ./configure
+# make
+
+- Create a Swap File
+-----------------------
+# fallocate -l 8G /swapfile
+# chmod 600 /swapfile
+# mkswap /swapfile
+# swapon /swapfile
+# nano /etc/fstab
+- Add this line to bottom of fstab file:
+  /swapfile   none    swap    sw    0   0
+- ctrl+x; y; enter (keep filename)
+
+- Get the Source Code
+----------------------
+# git clone 'coin git link'
+# cd ~/coin/
+# chmod -R 777 ~/coin/* 
+
+- Compile the code with flags
+  (fix any errors and start back './autogen.sh')
+-------------------------------------------------
+# ./autogen.sh
+# ./configure LDFLAGS="-L/coin/compile/lib/" CPPFLAGS="-I/coin/compile/include/"
+# make -s -j5
+# cd src/
+# strip coind
+
+- Start the file with daemon
+------------------------------
+# ./coin -daemon
+
+- Create and edit 'coin.conf' file
+------------------------------------
+# cd ~/coin/ (if not there)
+# sudo nano coin/coin.conf
+- add these lines to the file:
+	rpcuser=(username)
+	rpcpassword=(userpassword)
+	listen=1
+	rpcallow=127.0.0.1
+	txindex=1
+	maxconnections=16
+	addnodes=(get list)
+- ctrl+x; y; enter (keep filename)
+
+*make sure to set the file to read only.
+# sudo chmod 400 .pulse/pulse.conf
+# cd Pulse/src
+# sudo ./pulsed -daemon -txindex
+
+Check it daemon has started.  If it returns information, the daemon is working!
+# sudo ./pulsed getinfo
+
+Stopping the daemon
+# sudo ./pulsed stop
+
+******************************************
+*** Setting up the Explorer
+*** https://github.com/iquidus/explorer
+******************************************
+
+Install MongoDB Community Edition
+https://docs.mongodb.org/manual/tutorial/install-mongodb-on-ubuntu/
+
+# sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
+# echo "deb http://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
+# sudo apt-get update
+# sudo apt-get install -y mongodb-org
+
+Default init system is systemd which was Upstart previously. So you need to install Upstart, reboot your system and here you go, you can now run mongodb service.
+
+Install Upstart
+# sudo apt-get install upstart-sysv -y
+
+# Reboot your system
+# sudo reboot
+# sudo service mongod start
+
+Running MongoDB - reference
+# sudo service mongod start
+# sudo service mongod stop
+# sudo service mongod restart
+
+Installing Nodejs
+# sudo apt-get update
+# sudo apt-get install nodejs nodejs-legacy -y
+# sudo apt-get install npm -y
+
+Creating a MongoDB Database
+# sudo mongo
+> use explorerdb
+> db.createUser( { user: "3er44we222", pwd: "3eu4ue8hhk988!kd8", roles: [ "readWrite" ] } )
+> exit
+
+Installing the Explorer
+# cd /home/
+# git clone https://github.com/iquidus/explorer explorer
+# cd explorer && npm install --production
+# cp ./settings.json.template ./settings.json
+
+Modify the Settings File
+# sudo nano settings.json
+
+See if it's working
+# npm start
+
+Update the databases
+# sudo node scripts/sync.js index update 
+
+Install Forever to keep the js running
+# sudo npm install forever -g
+# sudo npm install forever-monitor
+
+Start the Explorer
+# forever start bin/cluster
+
+******************************************
+*** Installing Cron
+*** https://help.ubuntu.com/community/CronHowto
+******************************************
+
+# sudo apt-get install gnome-schedule -y
+
+Editing Cron
+# sudo crontab -e
+
+Add Cron to File to update the explorer
+*/1 * * * * cd /path/to/explorer && /usr/bin/node scripts/sync.js index update > /dev/null 2>&1
+
+Add Cron to make sure the Pulsed runs (NOT WORKING)
+If anyone has a good reboot for this, please post in the comments.
+@reboot cd /root/Pulse/src ./pulsed -daemon -txindex
+@reboot cd /root/explorer forever start bin/cluster 

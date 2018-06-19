@@ -1,0 +1,147 @@
+install ubuntu desktop and vnc server Ubuntu 16.04
+--------------------------------------------------
+# apt-get install vnc4server
+
+login to vps server and add admin account
+---------------------------------------
+# adduser username
+- answer queries
+
+-install node.js and npm
+--------------------------- 
+# apt-get install python-software-properties
+# curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+# apt-get install -y nodejs
+# apt-get install gcc g++ make
+# curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+# echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+# apt-get update && sudo apt-get install yarn
+# apt-get update
+# apt install nodejs
+	- check version
+# nodejs --version
+ 
+-install MongoDB
+--------------------------
+# apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
+ Result:	gpg: Total number processed: 1
+		gpg:               imported: 1  (RSA: 1)
+
+# echo "deb http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
+# apt-get update
+# apt-get install -y mongodb-org
+
+-start MongoDB
+----------------------
+# systemctl start mongod
+# npm install forever -g
+# mongo
+> use explorerdb
+> db.createUser( { user: "iquidus", pwd: "3xp!0reR", roles: [ "readWrite" ] } )
+> exit
+
+-get block explorer
+---------------------
+# git clone https://github.com/iquidus/explorer explorer
+# cd explorer && npm install --production
+# cp ./settings.json.template ./settings.json
+
+- insatall zip & unzip
+------------------------
+# apt-get update
+# apt-get install zip
+# apt-get install unzip
+# mkdir ~/explorer/images/
+
+- downlaod files 
+---------------------------
+# cd images/
+# wget -q 'github link: coinlogo.png'
+# cd ~/explorer/public/
+# wget -q 'github link: coin.ico'
+
+- to edit settings.json
+-------------------------
+# nano settings.json
+
+
+line 8:  coin name
+line 10: port
+line 16: coin symbol
+line 19: logo
+line 22: icon
+line 29: theme
+line 32: port
+line 36-39: with info from line 27 above
+line 50-52: info placed in 'coin'.conf
+line 63-71: info to be displayed
+line 77: difficulty
+line 83+84: 'getblockhash' from wallet for any block
+line 85+86: verify a tx to get this
+line 118: twitter
+line 123: 'getblock (genesis hash)'
+line 124: 'getblockhash 0'
+ line 150: hash rate
+
+
+-install and compile coin
+---------------------------
+
+-Basic packages to build the coin
+# sudo apt-get install build-essential libssl-dev libdb++-dev libboost-all-dev libqrencode-dev miniupnpc libminiupnpc-dev autoconf pkg-config libtool autotools-dev libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools libprotobuf-dev automake -y
+
+-Create a Swap File - Low Ram Servers
+-------------------------------------
+# fallocate -l 4G /swapfile
+# chmod 600 /swapfile
+# mkswap /swapfile
+# swapon /swapfile
+# nano /etc/fstab
+
+-Add to fstab file
+------------------
+# /swapfile   none    swap    sw    0   0
+
+-Adding the Coin
+-----------------
+# git 'coin git link'
+# cd coin/ 
+# chmod -R 777 ~/coin/*
+
+-Compile the code
+--------------------
+# make -f makefile.unix USE_UPNP=1
+# strip coind
+
+-Start the file with daemon flag so that you can create a config file
+----------------------------------------------------------------------
+# ./coin/coind -daemon
+
+-Create a conf file in .coin/coin.conf
+--------------------------------------
+# cd ./coin
+# nano .coin/coin.conf
+-add these to coin.conf
+server=1
+rpcuser=user
+rpcpassword=password
+rpcallow=127.0.0.1
+txindex=1
+
+*make sure to set the file to read only.
+# sudo chmod 400 .pulse/pulse.conf
+# cd coin/src*****
+# ./coind -daemon -txindex
+
+Check it daemon has started.  If it returns information, the daemon is working!
+# ./coind getinfo
+
+Stopping the daemon
+# ./pulsed stop
+ 
+To use forever to start (run in directory of explorer):
+forever start -c "npm start" ./
+ 
+crontab information:
+*/1 * * * * cd explorer && /usr/bin/nodejs scripts/sync.js index update > /dev/null 2>&1
+*/5 * * * * cd explorer && /usr/bin/nodejs scripts/peers.js > /dev/null 2>&1
